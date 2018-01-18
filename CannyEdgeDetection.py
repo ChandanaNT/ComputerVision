@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
 import math
 
 
@@ -31,7 +30,8 @@ ySize = img.shape[1]
 print(xSize, ySize)
 edgeImage = np.zeros((xSize,ySize))
 
-upperThreshold = 10
+upperThreshold = 120
+lowerThreshold = 50
 
 for row in range(xSize):
     for col in range(ySize):
@@ -46,59 +46,148 @@ for row in range(xSize):
 
         isEdge = True
 
-        if(currDirection>112.5 and currDirection <=157.5):
+        if(currDirection > 112.5 and currDirection <= 157.5):
         
-            if(col > 0 and row < ySize-1 and magnitude[row][col] <= magnitude[row+1][col-1] ) :
+            if(col > 0 and row < xSize-1 and magnitude[row][col] <= magnitude[row+1][col-1] ) :
                 isEdge = False;
-            if(col < xSize-1 and row > 0 and magnitude[row][col] <= magnitude[row-1][col+1] ) :
+            if(col < ySize-1 and row > 0 and magnitude[row][col] <= magnitude[row-1][col+1] ) :
                 isEdge = False;
         
-        elif(currDirection>67.5 and currDirection <= 112.5) :
+        elif(currDirection > 67.5 and currDirection <= 112.5) :
         
-            if(col > 0 and magnitude[row][col] <= magnitude[row][col-1] ) :
+            if(row > 0 and magnitude[row][col] <= magnitude[row-1][col] ) :
                 isEdge = False;
-            if(col < xSize-1 and magnitude[row][col] <= magnitude[row][col+1] ) :
+            if(row < xSize-1 and magnitude[row][col] <= magnitude[row+1][col] ) :
                 isEdge = False;
         
         elif(currDirection > 22.5 and currDirection <= 67.5) :
         
             if(col > 0 and row > 0 and magnitude[row][col] <= magnitude[row-1][col-1] ) :
                 isEdge = False;
-            if(col < xSize-1 and row < ySize-1 and magnitude[row][col] <= magnitude[row+1][col+1] ) :
+            if(col < ySize-1 and row < xSize-1 and magnitude[row][col] <= magnitude[row+1][col+1] ) :
                 isEdge = False;
         
         else :
         
-            if(row > 0 and magnitude[row][col] <= magnitude[row-1][col]) :
+            if(col > 0 and magnitude[row][col] <= magnitude[row][col-1]) :
                 isEdge = False;
-            if(row < xSize-1 and magnitude[row][col] <= magnitude[row+1][col] ) :
+            if(col < ySize-1 and magnitude[row][col] <= magnitude[row][col+1] ) :
                 isEdge = False;
         
 
         if(isEdge):
             edgeImage[row][col] = 255
 
-cv2.imshow('image',edgeImage)
+cv2.imshow('After Maximum Suppression',edgeImage)
 cv2.waitKey()
 
+imageChanged = True
+i = 0
+print('Starting Hysterisis Thresholding ')
 
+while(imageChanged):
+    imageChanged = False
 
+    for row in range(xSize):
+        for col in range(ySize):
+            if(row < 2 or row >= xSize-2 or col < 2 or col >= ySize-2) :
+                continue
+            currDirection = direction[row][col]
 
+            if(edgeImage[row][col]==255):
+                edgeImage[row][col]=100
+                if(currDirection > 112.5 and currDirection <= 157.5) :
+                    if(row < xSize-1 and col > 0) :
+                        if(lowerThreshold <= magnitude[row+1][col-1] and
+                        edgeImage[row+1][col-1]!= 100 and
+                        direction[row+1][col-1] > 112.5 and
+                        direction[row+1][col-1] <= 157.5 and
+                        magnitude[row+1][col-1] > magnitude[row+2][col-2] and
+                        magnitude[row+1][col-1] > magnitude[row][col] ) :
+                            edgeImage[row+1][col-1] = 255
+                            imageChanged = True
 
-'''plt.subplot(121),plt.imshow(magX),plt.title('Original')
-plt.xticks([]), plt.yticks([])
-plt.subplot(122),plt.imshow(magY),plt.title('Blurred')
-plt.xticks([]), plt.yticks([])
-plt.show()''
+                    if(col < ySize-1 and row > 0) :
+                        if(lowerThreshold <= magnitude[row-1][col+1] and
+                        edgeImage[row-1][col+1] != 100 and
+                        direction[row-1][col+1] > 112.5 and
+                        direction[row-1][col+1] <= 157.5  and
+                        magnitude[row-1][col+1] > magnitude[row][col] and
+                        magnitude[row-1][col+1] > magnitude[row-2][col+2]) :
+                            edgeImage[row-1][col+1] = 255
+                            imageChanged = True
 
-cv2.imshow('image',img)
+                elif(currDirection > 67.5 and currDirection <= 112.5) :
+                    if(row > 0) :
+                        if(lowerThreshold <= magnitude[row-1][col] and
+                        edgeImage[row-1][col]!= 100 and
+                        direction[row-1][col] > 67.5 and
+                        direction[row-1][col] <= 112.5  and
+                        magnitude[row-1][col] > magnitude[row-2][col-1] and
+                        magnitude[row-1][col] > magnitude[row][col+1]):
+                            edgeImage[row-1][col] = 255
+                            imageChanged = True
+                        
+                    if(row < xSize-1) :
+                        if(lowerThreshold <= magnitude[row+1][col] and
+                        edgeImage[row+1][col]!= 100 and
+                        direction[row+1][col] > 67.5 and
+                        direction[row+1][col] <= 112.5 and
+                        magnitude[row+1][col] > magnitude[row][col-1] and
+                        magnitude[row+1][col] > magnitude[row+2][col+1]):
+                            edgeImage[row+1][col] = 255
+                            imageChanged = True
+                        
+                elif(currDirection > 22.5 and currDirection <= 67.5) :
+                    if(col > 0 and row < ySize-1) :
+                        if(lowerThreshold <= magnitude[row-1][col-1] and
+                        edgeImage[ row-1][col-1]!= 100 and
+                        direction[row-1][col-1] > 22.5 and
+                        direction[row-1][col-1]  <= 67.5 and
+                        magnitude[row-1][col-1] > magnitude[row-2][col-2] and
+                        magnitude[row-1][col-1] > magnitude[row][col] ) :
+                            edgeImage[row-1][col-1] = 255
+                            imageChanged = True
+                       
+                    if(col < ySize-1 and row > 0) :
+                        if(lowerThreshold <= magnitude[row+1][col+1] and
+                        edgeImage[row+1][col+1] != 100 and
+                        direction[row+1][col+1] > 22.5 and
+                        direction[row+1][col+1] <= 67.5 and
+                        magnitude[row+1][col+1] > magnitude[row][col] and
+                        magnitude[row+1][col+1] > magnitude[row+1][col+1]) :
+                            edgeImage[row+1][col+1] = 255
+                            imageChanged = True
+                        
+                else :
+                    if( col > 0) :
+                        if(lowerThreshold <= magnitude[row][col-1] and
+                        edgeImage[row][col-1]!= 100 and
+                        direction[row][col] < 22.5 or
+                        direction[row][col-1] >= 157.5 and
+                        magnitude[row][col-1] > magnitude[row][col-2] and
+                        magnitude[row][col-1] > magnitude[row][col]) :
+                            edgeImage[row][col-1] = 255
+                            imageChanged = True
+    
+                    if(col < ySize-1) :
+                        if(lowerThreshold <= magnitude[row][col+1] and
+                        edgeImage[row][col+1] != 100 and
+                        direction[row][col+1] < 22.5 or
+                        direction[row][col+1] >= 157.5 and
+                        magnitude[row][col+1] > magnitude[row][col] and
+                        magnitude[row][col+1] > magnitude[row][col+2] ) :
+                            edgeImage[row][col+1] = 255
+                            imageChanged = True
+                       
+    print('Finished iteration %d'%(i))
+    i = i + 1
+                        
+for row in range(xSize):
+        for col in range(ySize):
+            if edgeImage[row][col] == 100 :
+                edgeImage[row][col] = 255           
+                
+cv2.imshow('My Canny Edge Detection',edgeImage)
+cv2.waitKey()
 
-k = cv2.waitKey(0)
-if k == 27:         # wait for ESC key to exit
-    cv2.destroyAllWindows()
-elif k == ord('s'): # wait for 's' key to save and exit
-    cv2.imwrite('messigray.png',img)
-    cv2.destroyAllWindows()'''
-#OpenCV uses BGR as its default colour order for images, matplotlib uses RGB
-#a = cv2.cvtColor(magX, cv2.COLOR_BGR2RGB)
-#b = cv2.cvtColor(magY, cv2.COLOR_BGR2RGB)

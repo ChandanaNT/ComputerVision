@@ -1,5 +1,5 @@
 #Experimented with the CalTech 101 objects dataset
-#Uses the bag of words representation of images and Naive Bayes classifier
+#Uses the bag of words representation of images for Naive Bayes classifier & Decision Tree
 
 import os
 import cv2
